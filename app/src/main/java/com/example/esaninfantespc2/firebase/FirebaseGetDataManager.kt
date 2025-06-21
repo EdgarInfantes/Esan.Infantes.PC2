@@ -37,7 +37,42 @@ object FirebaseGetDataManager {
             Result.failure(e)
         }
     }
+    suspend fun obtenerHistorialDelUsuario(): Result<List<Conversion>> {
+        val uid = auth.currentUser?.uid
+            ?: return Result.failure(Exception("Usuario no autenticado"))
 
+        return try {
+            val snapshot = firestore
+                .collection("historial")
+                .whereEqualTo("uid", uid)
+                .orderBy("timestamp")
+                .get()
+                .await()
+
+            val lista = snapshot.documents.mapNotNull { doc ->
+                val entrada = doc.getString("MonedaEntrada") ?: return@mapNotNull null
+                val salida = doc.getString("MonedaSalida") ?: return@mapNotNull null
+                val montoEntrada = doc.getDouble("MontoEntrada") ?: return@mapNotNull null
+                val montoSalida = doc.getDouble("MontoSalida") ?: return@mapNotNull null
+                val fecha = doc.getTimestamp("timestamp") ?: Timestamp.now()
+
+                Conversion(
+                    monedaEntrada = entrada,
+                    monedaSalida = salida,
+                    montoEntrada = String.format("%.2f", montoEntrada).toDouble(),
+                    montoSalida = String.format("%.2f", montoSalida).toDouble(),
+                    timestamp = fecha
+                )
+            }
+
+            Result.success(lista)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+
+    /*
     suspend fun obtenerHistorialDelUsuario(): Result<List<Conversion>> {
         val uid = auth.currentUser?.uid
             ?: return Result.failure(Exception("Usuario no autenticado"))
@@ -71,4 +106,5 @@ object FirebaseGetDataManager {
             Result.failure(e)
         }
     }
+    */
 }

@@ -2,6 +2,8 @@ package com.example.esaninfantespc2.presentation.home
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -52,19 +54,41 @@ fun HomeScreen(
             modifier = Modifier.fillMaxWidth()
         )
 
-        MonedaDropdownMenu(
-            label = "Moneda de origen",
-            selected = monedaOrigen,
-            options = monedas.filter { it != monedaDestino },
-            onSelected = { monedaOrigen = it }
-        )
+        Column(modifier = Modifier.fillMaxWidth()) {
+            MonedaDropdownMenu(
+                label = "Moneda de origen",
+                selected = monedaOrigen,
+                options = monedas.filter { it != monedaDestino },
+                onSelected = { monedaOrigen = it }
+            )
 
-        MonedaDropdownMenu(
-            label = "Moneda de destino",
-            selected = monedaDestino,
-            options = monedas.filter { it != monedaOrigen },
-            onSelected = { monedaDestino = it }
-        )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
+                horizontalArrangement = Arrangement.End
+            ) {
+                IconButton(
+                    onClick = {
+                        val temp = monedaOrigen
+                        monedaOrigen = monedaDestino
+                        monedaDestino = temp
+                    }
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.SwapHoriz,
+                        contentDescription = "Intercambiar monedas"
+                    )
+                }
+            }
+
+            MonedaDropdownMenu(
+                label = "Moneda de destino",
+                selected = monedaDestino,
+                options = monedas.filter { it != monedaOrigen },
+                onSelected = { monedaDestino = it }
+            )
+        }
 
         Button(
             onClick = {
@@ -76,7 +100,6 @@ fun HomeScreen(
                     val usd = montoDouble * tasaOrigen
                     val final = usd / tasaDestino
 
-                    // Guardar en Firestore
                     CoroutineScope(Dispatchers.IO).launch {
                         FirebaseGetDataManager.guardarConversion(
                             monedaEntrada = monedaOrigen,

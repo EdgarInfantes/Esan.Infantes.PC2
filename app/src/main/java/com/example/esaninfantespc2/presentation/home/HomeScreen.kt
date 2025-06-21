@@ -8,10 +8,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.example.esaninfantespc2.viewmodel.UserSessionViewModel
 import com.example.esaninfantespc2.firebase.FirebaseGetDataManager
+import com.example.esaninfantespc2.util.AnimatedSnackbar
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -27,8 +29,10 @@ fun HomeScreen(
     var monedaOrigen by remember { mutableStateOf(monedas.first()) }
     var monedaDestino by remember { mutableStateOf(monedas.last()) }
     var resultado by remember { mutableStateOf<String?>(null) }
+    var showSnackbar by remember { mutableStateOf(false) }
+    var snackbarMessage by remember { mutableStateOf("") }
+    var snackbarColor by remember { mutableStateOf(Color.Green) }
 
-    // Tasas hacia USD
     val tasasAUSD = mapOf(
         "PEN" to 0.27,
         "EUR" to 1.08,
@@ -93,30 +97,48 @@ fun HomeScreen(
         Button(
             onClick = {
                 val montoDouble = monto.toDoubleOrNull()
+                if (montoDouble == null) {
+                    snackbarMessage = "Monto inválido"
+                    snackbarColor = Color(0xFFF44336)
+                    showSnackbar = true
+                    return@Button
+                }
+
                 val tasaOrigen = tasasAUSD[monedaOrigen] ?: 0.0
                 val tasaDestino = tasasAUSD[monedaDestino] ?: 0.0
+                val usd = montoDouble * tasaOrigen
+                val final = usd / tasaDestino
 
-                resultado = if (montoDouble != null) {
-                    val usd = montoDouble * tasaOrigen
-                    val final = usd / tasaDestino
-
-                    CoroutineScope(Dispatchers.IO).launch {
-                        FirebaseGetDataManager.guardarConversion(
-                            monedaEntrada = monedaOrigen,
-                            monedaSalida = monedaDestino,
-                            montoEntrada = montoDouble,
-                            montoSalida = final
-                        )
-                    }
-
-                    "$monto $monedaOrigen equivale a %.2f $monedaDestino".format(final)
-                } else {
-                    "Monto inválido"
+                CoroutineScope(Dispatchers.IO).launch {
+                    FirebaseGetDataManager.guardarConversion(
+                        monedaEntrada = monedaOrigen,
+                        monedaSalida = monedaDestino,
+                        montoEntrada = montoDouble,
+                        montoSalida = final
+                    )
                 }
+
+                resultado = "$monto $monedaOrigen equivale a %.2f $monedaDestino".format(final)
+                snackbarMessage = "Conversión exitosa"
+                snackbarColor = Color(0xFF4CAF50)
+                showSnackbar = true
             },
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Convertir")
+        }
+
+        AnimatedSnackbar(
+            visible = showSnackbar,
+            message = snackbarMessage,
+            backgroundColor = snackbarColor
+        )
+
+        LaunchedEffect(showSnackbar) {
+            if (showSnackbar) {
+                kotlinx.coroutines.delay(2000)
+                showSnackbar = false
+            }
         }
 
         resultado?.let {
